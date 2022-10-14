@@ -75,7 +75,6 @@ int main()
 		
 		getline(label_file, label_line);
 		if(pred_model.compare(label_line) == 0) correct_num++;
-//		cout << label_line << " " << pred_model << " " << model_max << endl;
 //		outfile << pred_model << " " << model_max << endl;
 	}
 	cout << "accurracy = " << correct_num/2500 << endl;

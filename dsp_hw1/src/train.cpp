@@ -16,7 +16,7 @@ int main()
 	int N = 6;
 	int T = 50;
 	int num_of_seq = 10000;
-	int iters = 5;
+	int iters = 1;
 		
 	//先讀取初始值 
 	HMM hmm_initial;
@@ -49,16 +49,16 @@ int main()
 			ifstream infile(read_file_name.c_str());
 			string train_line;
 			//初始化最後更新要用的五個值 
-			double total1[N]={0}, total2[N][N]={0}, total3[N][N]={0}, total4[N][N]={0}, total5[N][N]={0};
-//			for(int i=0; i<N; i++){
-//				total1[i] = 0;
-//				for(int j=0; j<N; j++){
-//					total2[i][j] = 0;
-//					total3[i][j] = 0;
-//					total4[i][j] = 0;
-//					total5[i][j] = 0;
-//				}
-//			}
+			double total1[N], total2[N][N], total3[N][N], total4[N][N], total5[N][N];
+			for(int i=0; i<N; i++){
+				total1[i] = 0;
+				for(int j=0; j<N; j++){
+					total2[i][j] = 0;
+					total3[i][j] = 0;
+					total4[i][j] = 0;
+					total5[i][j] = 0;
+				}
+			}
 			
 			while(getline(infile, train_line)){		//讀取一萬筆sequence 
 				//============================================痛苦的計算4個值===========================================// 
@@ -161,9 +161,8 @@ int main()
 						double total_gamma_top = 0;
 						double total_gamma_down = 0;
 						for(int k=0; k<T; k++){
-							idx = dict[train_line[k]];
 							total_gamma_down += gamma[k][i];
-							if(idx == j){
+							if(train_line[k]-65 == j){
 								total_gamma_top += gamma[k][i];
 							}
 						}
