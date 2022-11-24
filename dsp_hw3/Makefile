@@ -10,23 +10,27 @@ vpath %.c $(SRC_PATH)
 vpath %.cpp $(SRC_PATH)
 
 TARGET = mydisambig
+TARGET2 = mydisambig_trigram
 SRC = mydisambig.cpp
 OBJ = $(SRC:.cpp=.o)
+OBJ2 = mydisambig_trigram.o
 FROM ?= Big5-ZhuYin.map
 TO ?= ZhuYin-Big5.map
 .PHONY: all clean map
 
+all: $(TARGET) $(TARGET2)
+
 $(TARGET): $(OBJ) -loolm -ldstruct -lmisc
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+$(TARGET2): $(OBJ2) -loolm -ldstruct -lmisc
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $<
 
-all: $(TARGET)
-
 map:
-	@#TODO
-	@#python3 $(SRC_PATH)/mapping.py $(FROM) $(TO)
+	python3 $(SRC_PATH)/transfer.py $(FROM) $(TO)
 
 clean:
 	$(RM) $(OBJ) $(TARGET)

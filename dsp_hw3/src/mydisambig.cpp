@@ -26,18 +26,22 @@ double getBigramProb(const char *w1, const char *w2)
     return lm.wordProb( wid2, context);
 }
 
-int main(){
+int main(int argc, char *argv[]){
+    if(argc<5){
+        cout << "input data not enough: "<<argc << endl;
+		return 0;
+	}
+    
     {
-        const char lm_filename[] = "./corpus.lm";
-        File lmFile( lm_filename, "r" );
+        const char* lm_filename[] = {argv[3]};
+        File lmFile( *lm_filename, "r" );
         lm.read(lmFile);
         lmFile.close();
     }
-
     // 讀檔
-    ifstream ex_file("test_data/example_split.txt");
-    ifstream map_file("ZhuYin-Big5.map");
-    ofstream outfile ("result.txt");
+    ifstream ex_file(argv[1]);
+    ifstream map_file(argv[2]);
+    ofstream outfile(argv[4]);
 
     // 將map中的key跟value存在vector中用來做之後的對應
     // map_key = 每個可能出現的國字及注音 (ex:ㄅ ㄆ ㄇ...)
@@ -49,14 +53,13 @@ int main(){
         map_key.push_back(map_line.substr(0,2));
 
         vector<string> map_value;
-        for (int i = 3; i < map_line.length(); i++) { 
-            if (map_line[i] == ' ') continue;
+        for (int i = 2; i < map_line.length(); i++) {
+            if (map_line[i] == ' ' || map_line[i] == '\t') continue;
             map_value.push_back(map_line.substr(i++,2));
         }
-        map_value.pop_back();
+        // map_value.pop_back();
         map_values.push_back(map_value);
     }
-
     //=================================
     string ex_line = "";
     while(getline(ex_file, ex_line)){
@@ -78,7 +81,10 @@ int main(){
                 }
             }
         }
-
+        vector<string> end;
+        end.push_back("</s>");
+        all_word_maps.push_back(end);
+        
         // Viterbi
         // 動態建立矩陣
         int row = all_word_maps.size();
@@ -100,36 +106,19 @@ int main(){
             last_pos[i]=new int [col];
             memset(last_pos[i],0,col*sizeof(int));
         }
-
+        
         //=======正式開始算==========
         for(int j=0; j<all_word_maps[0].size(); j++){
-            prob[0][j] = fabs(getBigramProb("<s>", all_word_maps[0][j].c_str()));
+            prob[0][j] = getBigramProb("<s>", all_word_maps[0][j].c_str());
         }
 
         for(int k=1; k<row; k++){                                       // 走訪一行中的每個字
-            // 可能1：兩個字都是注音(這部分可以tag掉，但我覺得這樣做準確率較高)
-            if(all_word_maps[k].size() > 1 && all_word_maps[k-1].size() > 1){
-                double temp_prob = prob[k-1][0];
-                int temp_pos = 0;
-                for(int j=1; j<all_word_maps[k-1].size(); j++){           // 走訪上個字的所有可能
-                    if(prob[k-1][j] < temp_prob){
-                        temp_prob = prob[k-1][j];
-                        temp_pos = j;
-                    }
-                }
-                for(int i=0; i<all_word_maps[k].size(); i++){
-                    prob[k][i] = temp_prob * fabs(getBigramProb(all_word_maps[k-1][temp_pos].c_str(), all_word_maps[k][i].c_str()));
-                    last_pos[k][i] = temp_pos;
-                }
-                continue;
-            }
-            // 可能2：前一個字是字或後一個字是字
             for(int i=0; i<all_word_maps[k].size(); i++){             // 走訪這個字的所有可能
-                prob[k][i] = prob[k-1][0] * fabs(getBigramProb(all_word_maps[k-1][0].c_str(), all_word_maps[k][i].c_str()));
+                prob[k][i] = prob[k-1][0] + getBigramProb(all_word_maps[k-1][0].c_str(), all_word_maps[k][i].c_str());
                 last_pos[k][i] = 0;
                 for(int j=1; j<all_word_maps[k-1].size(); j++){           // 走訪上個字的所有可能
-                    double temp_p = prob[k-1][j] * fabs(getBigramProb(all_word_maps[k-1][j].c_str(), all_word_maps[k][i].c_str()));
-                    if(temp_p < prob[k][i]){
+                    double temp_p = prob[k-1][j] + getBigramProb(all_word_maps[k-1][j].c_str(), all_word_maps[k][i].c_str());
+                    if(temp_p > prob[k][i]){
                         prob[k][i] = temp_p;
                         last_pos[k][i] = j;
                     }
@@ -138,18 +127,8 @@ int main(){
         }
 
         // backtrack
-        int best = 0;         // 紀錄最後一排字的最佳解位置，後面要最backtrack
-        double temp_p = prob[row-1][0];
-        for(int i=1; i<all_word_maps[row-1].size(); i++){
-            if(prob[row-1][i] < temp_p){
-                temp_p = prob[row-1][i];
-                best = i;
-            }
-        }
-
         stack<int> result_st;
-        result_st.push(best);
-        int last = best;
+        int last = 0;
         for(int i=row-1; i>0; i--){
             result_st.push(last_pos[i][last]);
             last = last_pos[i][last];
